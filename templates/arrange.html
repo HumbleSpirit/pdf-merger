@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arrange PDF Files</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Упорядочите PDF-файлы</h1>
+        <p>Перетащите файлы, чтобы изменить порядок объединения</p>
+        
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for message in messages %}
+                        <div class="flash-message">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
+        <form action="{{ url_for('merge_files') }}" method="post" id="arrange-form">
+            <ul id="sortable-list" class="sortable-list">
+                {% for file in files %}
+                <li class="sortable-item" data-id="{{ file.filename }}">
+                    <div class="file-info">
+                        <span class="file-name">{{ file.original_name }}</span>
+                        <span class="file-pages">({{ file.pages }} стр.)</span>
+                    </div>
+                    <input type="hidden" name="file_order" value="{{ file.filename }}">
+                </li>
+                {% endfor %}
+            </ul>
+            
+            <div class="form-actions">
+                <a href="{{ url_for('index') }}" class="btn-secondary">Назад</a>
+                <button type="submit" class="btn-submit">Объединить PDF</button>
+            </div>
+        </form>
+    </div>
+    
+    <script>
+        // Функция для перетаскивания элементов списка
+        document.addEventListener('DOMContentLoaded', function() {
+            const list = document.getElementById('sortable-list');
+            let draggingItem = null;
+            
+            // Функции для перетаскивания
+            function handleDragStart(e) {
+                draggingItem = this;
+                this.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', this.innerHTML);
+            }
+            
+            function handleDragEnd(e) {
+                this.classList.remove('dragging');
+                document.querySelectorAll('.sortable-item').forEach(item => {
+                    item.classList.remove('over');
+                });
+                
+                // Обновить скрытые поля для правильного порядка
+                updateFormInputs();
+            }
+            
+            function handleDragOver(e) {
+                e.preventDefault();
+                return false;
+            }
+            
+            function handleDragEnter(e) {
+                this.classList.add('over');
+            }
+            
+            function handleDragLeave(e) {
+                this.classList.remove('over');
+            }
+            
+            function handleDrop(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                
+                if (draggingItem !== this) {
+                    // Меняем позицию элемента в DOM
+                    const allItems = Array.from(list.querySelectorAll('.sortable-item'));
+                    const draggingIndex = allItems.indexOf(draggingItem);
+                    const dropIndex = allItems.indexOf(this);
+                    
+                    if (draggingIndex < dropIndex) {
+                        this.parentNode.insertBefore(draggingItem, this.nextSibling);
+                    } else {
+                        this.parentNode.insertBefore(draggingItem, this);
+                    }
+                }
+                
+                return false;
+            }
+            
+            // Функция для обновления скрытых полей формы
+            function updateFormInputs() {
+                // Удаляем существующие скрытые поля
+                document.querySelectorAll('input[name="file_order"]').forEach(input => {
+                    input.remove();
+                });
+                
+                // Добавляем новые скрытые поля в правильном порядке
+                document.querySelectorAll('.sortable-item').forEach(item => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'file_order';
+                    input.value = item.getAttribute('data-id');
+                    document.getElementById('arrange-form').appendChild(input);
+                });
+            }
+            
+            // Назначаем обработчики событий для всех элементов
+            document.querySelectorAll('.sortable-item').forEach(item => {
+                item.setAttribute('draggable', 'true');
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragend', handleDragEnd);
+                item.addEventListener('dragover', handleDragOver);
+                item.addEventListener('dragenter', handleDragEnter);
+                item.addEventListener('dragleave', handleDragLeave);
+                item.addEventListener('drop', handleDrop);
+            });
+        });
+    </script>
+</body>
+</html>

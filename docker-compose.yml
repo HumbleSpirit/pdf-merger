@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  pdf-merger:
+    build: .
+    container_name: pdf-merger
+    volumes:
+      - ./uploads:/app/uploads
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    
